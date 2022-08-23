@@ -11,6 +11,7 @@ const String baseURL = 'http://127.0.0.1:5000/api/';
 String memberId = '';
 String memberPassword = '';
 List<String> search = ['', '', '', '', '', '', '', ''];
+String savedISBN = '';
 
 void main() {
   runApp(const MyApp());
@@ -49,6 +50,15 @@ void gotoAdminHome(context) {
     context,
     MaterialPageRoute(
       builder: (BuildContext context) => const AdminHome(),
+    ),
+  );
+}
+
+void gotoAddBook(context) {
+  Navigator.pushReplacement(
+    context,
+    MaterialPageRoute(
+      builder: (BuildContext context) => const OperatorAddBook(),
     ),
   );
 }
@@ -101,6 +111,89 @@ errorDialog(int code, String status, context) {
       );
     },
   );
+}
+
+//add book routes
+Future<http.Response> addBook(
+    isbn, name, publishYear, edition, publisherName, quantity) {
+  return http.post(Uri.parse(baseURL + 'operator/add_book'),
+      headers: {
+        'Content-type': 'application/json',
+        'Accept': 'application/json',
+        'authorization': 'Basic ' +
+            base64Encode(
+                utf8.encode(memberId.toString() + ':' + memberPassword))
+      },
+      body: jsonEncode(<String, String>{
+        'isbn': isbn,
+        'name': name,
+        'publish_year': publishYear,
+        'edition': edition,
+        'publisher_name': publisherName,
+        'quantity': quantity
+      }));
+}
+
+Future<http.Response> viewBook(isbn) {
+  return http.post(Uri.parse(baseURL + 'user/view_book'),
+      headers: {
+        'Content-type': 'application/json',
+        'Accept': 'application/json',
+        'authorization': 'Basic ' +
+            base64Encode(
+                utf8.encode(memberId.toString() + ':' + memberPassword))
+      },
+      body: jsonEncode(<String, String>{
+        'isbn': isbn,
+      }));
+}
+
+Future<http.Response> authorBook(author, isbn, number) {
+  return http.post(Uri.parse(baseURL + 'operator/author_book'),
+      headers: {
+        'Content-type': 'application/json',
+        'Accept': 'application/json',
+        'authorization': 'Basic ' +
+            base64Encode(
+                utf8.encode(memberId.toString() + ':' + memberPassword))
+      },
+      body: jsonEncode(<String, String>{
+        'author_name': author,
+        'isbn': isbn,
+        'num': number
+      }));
+}
+
+Future<http.Response> translatorBook(translator, isbn, number) {
+  return http.post(Uri.parse(baseURL + 'operator/translator_book'),
+      headers: {
+        'Content-type': 'application/json',
+        'Accept': 'application/json',
+        'authorization': 'Basic ' +
+            base64Encode(
+                utf8.encode(memberId.toString() + ':' + memberPassword))
+      },
+      body: jsonEncode(<String, String>{
+        'translator_name': translator,
+        'isbn': isbn,
+        'num': number
+      }));
+}
+
+Future<http.Response> categoryBook(category, isbn, number) {
+  return http.post(Uri.parse(baseURL + 'operator/category_book'),
+      headers: {
+        'Content-type': 'application/json',
+        'Accept': 'application/json',
+        'authorization': 'Basic ' +
+            base64Encode(
+                utf8.encode(memberId.toString() + ':' + memberPassword))
+      },
+      body: jsonEncode(<String, String>{
+        'category_name': category,
+        'isbn': isbn,
+        'num': number
+      }));
 }
 
 //everyone routes functions
@@ -561,6 +654,15 @@ class _UserHomeState extends State<UserHome> {
     );
   }
 
+  void _gotoViewBook() {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (BuildContext context) => const UserViewBook(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -590,6 +692,10 @@ class _UserHomeState extends State<UserHome> {
             ElevatedButton(
                 onPressed: _gotoChangePassword,
                 child: const Text('Change Password')),
+            const SizedBox(height: 10),
+            ElevatedButton(
+                onPressed: _gotoViewBook,
+                child: const Text('View Book Details')),
           ],
         ),
       ),
@@ -1075,6 +1181,60 @@ class _UserChangePasswordState extends State<UserChangePassword> {
   }
 }
 
+class UserViewBook extends StatefulWidget {
+  const UserViewBook({Key? key}) : super(key: key);
+  @override
+  State<UserViewBook> createState() => _UserViewBookState();
+}
+
+class _UserViewBookState extends State<UserViewBook> {
+  TextEditingController isbnController = TextEditingController();
+
+  void _viewBook() async {
+    var res = await viewBook(isbnController.text);
+    Map<String, dynamic> resmap = jsonDecode(res.body);
+    if (res.statusCode == 200 && resmap['status'] == 'not available') {
+      messageDialog('Book not available', context);
+    } else if (res.statusCode == 200 && resmap['status'] == 'available') {
+      messageDialog(resmap['book'], context);
+    } else {
+      errorDialog(res.statusCode, resmap['status'], context);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Row(children: <Widget>[
+          Text(libraryName),
+          Text("User View Book Details"),
+        ]),
+        leading: IconButton(
+            onPressed: () => gotoUserHome(context),
+            icon: const Icon(Icons.home)),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            TextField(
+              controller: isbnController,
+              decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
+                  labelText: 'ISBN:',
+                  hintText: 'Enter ISBN'),
+            ),
+            const SizedBox(height: 10),
+            ElevatedButton(
+                onPressed: _viewBook, child: const Text('View Book')),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class LoginOperator extends StatefulWidget {
   const LoginOperator({Key? key}) : super(key: key);
   @override
@@ -1183,7 +1343,10 @@ class _OperatorHomeState extends State<OperatorHome> {
     );
   }
 
-  void _gotoAddBook() {}
+  void _gotoAddBook() {
+    gotoAddBook(context);
+  }
+
   void _gotoAddQuantity() {
     Navigator.pushReplacement(
       context,
@@ -1254,6 +1417,400 @@ class _OperatorHomeState extends State<OperatorHome> {
             const SizedBox(height: 10),
             ElevatedButton(
                 onPressed: _gotoPrintCard, child: const Text('Print Card')),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class OperatorAddBook extends StatefulWidget {
+  const OperatorAddBook({Key? key}) : super(key: key);
+  @override
+  State<OperatorAddBook> createState() => _OperatorAddBookState();
+}
+
+class _OperatorAddBookState extends State<OperatorAddBook> {
+  TextEditingController isbnController = TextEditingController();
+  void _saveISBN() {
+    savedISBN = isbnController.text;
+    setState(() {});
+  }
+
+  void _gotoAddBook() {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (BuildContext context) => const AddBookBook(),
+      ),
+    );
+  }
+
+  void _gotoAddAuthor() {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (BuildContext context) => const AddBookAuthor(),
+      ),
+    );
+  }
+
+  void _gotoAddTranslator() {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (BuildContext context) => const AddBookTranslator(),
+      ),
+    );
+  }
+
+  void _gotoAddCategory() {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (BuildContext context) => const AddBookCategory(),
+      ),
+    );
+  }
+
+  void _viewBook() async {
+    var res = await viewBook(savedISBN);
+    Map<String, dynamic> resmap = jsonDecode(res.body);
+    if (res.statusCode == 200 && resmap['status'] == 'not available') {
+      messageDialog('Book not available', context);
+    } else if (res.statusCode == 200 && resmap['status'] == 'available') {
+      messageDialog(resmap['book'], context);
+    } else {
+      errorDialog(res.statusCode, resmap['status'], context);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Row(children: <Widget>[
+          Text(libraryName),
+          Text("Operator Add Book Home"),
+        ]),
+        leading: IconButton(
+            onPressed: () => gotoOperatorHome(context),
+            icon: const Icon(Icons.home)),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Text((savedISBN == '') ? '' : 'saved isbn: ' + savedISBN),
+            const SizedBox(height: 10),
+            TextField(
+              controller: isbnController,
+              decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
+                  labelText: (savedISBN == '') ? 'ISBN:' : 'ISBN Saved',
+                  hintText: 'Enter ISBN'),
+            ),
+            const SizedBox(height: 10),
+            ElevatedButton(
+                onPressed: _saveISBN, child: const Text('Save ISBN')),
+            const SizedBox(height: 10),
+            ElevatedButton(
+                onPressed: _viewBook, child: const Text('View Book')),
+            const SizedBox(height: 30),
+            ElevatedButton(
+                onPressed: _gotoAddBook, child: const Text('Add Book')),
+            const SizedBox(height: 10),
+            ElevatedButton(
+                onPressed: _gotoAddAuthor, child: const Text('Add Author')),
+            const SizedBox(height: 10),
+            ElevatedButton(
+                onPressed: _gotoAddTranslator,
+                child: const Text('Add Translator')),
+            const SizedBox(height: 10),
+            ElevatedButton(
+                onPressed: _gotoAddCategory, child: const Text('Add Category')),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class AddBookBook extends StatefulWidget {
+  const AddBookBook({Key? key}) : super(key: key);
+  @override
+  State<AddBookBook> createState() => _AddBookBookState();
+}
+
+class _AddBookBookState extends State<AddBookBook> {
+  TextEditingController nameController = TextEditingController();
+  TextEditingController publishYearController = TextEditingController();
+  TextEditingController editionController = TextEditingController();
+  TextEditingController publisherController = TextEditingController();
+  TextEditingController quantityController = TextEditingController();
+
+  _addBook() async {
+    var res = await addBook(
+        savedISBN,
+        nameController.text,
+        publishYearController.text,
+        editionController.text,
+        publisherController.text,
+        quantityController.text);
+    Map<String, dynamic> resmap = jsonDecode(res.body);
+    if (resmap['status'] == 'ok') {
+      messageDialog('Book Added.', context);
+    } else {
+      errorDialog(res.statusCode, resmap['status'], context);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Row(children: <Widget>[
+          Text(libraryName),
+          Text("Add Book"),
+        ]),
+        leading: IconButton(
+            onPressed: () => gotoAddBook(context),
+            icon: const Icon(Icons.home)),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            TextField(
+              controller: nameController,
+              decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
+                  labelText: 'Name:',
+                  hintText: 'Enter Name'),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: publishYearController,
+              decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
+                  labelText: 'Publish Year:',
+                  hintText: 'Enter Publish Year'),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: editionController,
+              decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
+                  labelText: 'Edition:',
+                  hintText: 'Enter Edition'),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: publisherController,
+              decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
+                  labelText: 'Publisher:',
+                  hintText: 'Enter Publisher Name'),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: quantityController,
+              decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
+                  labelText: 'Quantity:',
+                  hintText: 'Enter Quantity'),
+            ),
+            const SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: _addBook,
+              child: const Text('Add Book'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class AddBookAuthor extends StatefulWidget {
+  const AddBookAuthor({Key? key}) : super(key: key);
+  @override
+  State<AddBookAuthor> createState() => _AddBookAuthorState();
+}
+
+class _AddBookAuthorState extends State<AddBookAuthor> {
+  TextEditingController authorNameController = TextEditingController();
+  TextEditingController authorNumberController = TextEditingController();
+
+  _addAuthor() async {
+    var res = await authorBook(
+        authorNameController.text, savedISBN, authorNumberController.text);
+    Map<String, dynamic> resmap = jsonDecode(res.body);
+    if (resmap['status'] == 'ok') {
+      messageDialog('Author Added.', context);
+    } else {
+      errorDialog(res.statusCode, resmap['status'], context);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Row(children: <Widget>[
+          Text(libraryName),
+          Text("Add Author"),
+        ]),
+        leading: IconButton(
+            onPressed: () => gotoAddBook(context),
+            icon: const Icon(Icons.home)),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            TextField(
+              controller: authorNameController,
+              decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
+                  labelText: 'Author:',
+                  hintText: 'Enter Author Name'),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: authorNumberController,
+              decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
+                  labelText: 'Number:',
+                  hintText: 'Enter Author Number'),
+            ),
+            const SizedBox(height: 10),
+            ElevatedButton(
+                onPressed: _addAuthor, child: const Text('Add Author')),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class AddBookTranslator extends StatefulWidget {
+  const AddBookTranslator({Key? key}) : super(key: key);
+  @override
+  State<AddBookTranslator> createState() => _AddBookTranslatorState();
+}
+
+class _AddBookTranslatorState extends State<AddBookTranslator> {
+  TextEditingController translatorNameController = TextEditingController();
+  TextEditingController translatorNumberController = TextEditingController();
+
+  _addTranslator() async {
+    var res = await translatorBook(translatorNameController.text, savedISBN,
+        translatorNumberController.text);
+    Map<String, dynamic> resmap = jsonDecode(res.body);
+    if (resmap['status'] == 'ok') {
+      messageDialog('Translator Added.', context);
+    } else {
+      errorDialog(res.statusCode, resmap['status'], context);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Row(children: <Widget>[
+          Text(libraryName),
+          Text("Add Translator"),
+        ]),
+        leading: IconButton(
+            onPressed: () => gotoAddBook(context),
+            icon: const Icon(Icons.home)),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            TextField(
+              controller: translatorNameController,
+              decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
+                  labelText: 'Translator:',
+                  hintText: 'Enter Translator Name'),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: translatorNumberController,
+              decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
+                  labelText: 'Number:',
+                  hintText: 'Enter Translator Number'),
+            ),
+            const SizedBox(height: 10),
+            ElevatedButton(
+                onPressed: _addTranslator, child: const Text('Add Translator')),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class AddBookCategory extends StatefulWidget {
+  const AddBookCategory({Key? key}) : super(key: key);
+  @override
+  State<AddBookCategory> createState() => _AddBookCategoryState();
+}
+
+class _AddBookCategoryState extends State<AddBookCategory> {
+  TextEditingController categoryController = TextEditingController();
+  TextEditingController categoryNumberController = TextEditingController();
+
+  _addCategory() async {
+    var res = await categoryBook(
+        categoryController.text, savedISBN, categoryNumberController.text);
+    Map<String, dynamic> resmap = jsonDecode(res.body);
+    if (resmap['status'] == 'ok') {
+      messageDialog('Category Added.', context);
+    } else {
+      errorDialog(res.statusCode, resmap['status'], context);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Row(children: <Widget>[
+          Text(libraryName),
+          Text("Add Category"),
+        ]),
+        leading: IconButton(
+            onPressed: () => gotoAddBook(context),
+            icon: const Icon(Icons.home)),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            TextField(
+              controller: categoryController,
+              decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
+                  labelText: 'Category:',
+                  hintText: 'Enter Category Name'),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: categoryNumberController,
+              decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
+                  labelText: 'Number:',
+                  hintText: 'Enter Category Number'),
+            ),
+            const SizedBox(height: 10),
+            ElevatedButton(
+                onPressed: _addCategory, child: const Text('Add Category')),
           ],
         ),
       ),
@@ -1617,7 +2174,7 @@ class _LoginAdminState extends State<LoginAdmin> {
     memberPassword = (passwordController.text == '')
         ? memberPassword
         : sha256.convert(ascii.encode(passwordController.text)).toString();
-    var res = await operatorLogin();
+    var res = await adminLogin();
     Map<String, dynamic> resmap = jsonDecode(res.body);
     if (resmap['status'] == 'ok') {
       gotoAdminHome(context);
