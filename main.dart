@@ -1,3 +1,4 @@
+import 'dart:html' as html;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -6,7 +7,7 @@ import 'package:horizontal_data_table/horizontal_data_table.dart';
 
 // config
 const String libraryName = 'IAU Shiraz Library--->';
-const String baseURL = 'http://127.0.0.1:5000/api/';
+const String baseURL = 'https://api-iauproject.fandogh.cloud/api/';
 
 String memberId = '';
 String memberPassword = '';
@@ -109,6 +110,43 @@ errorDialog(int code, String status, context) {
           ),
         ],
       );
+    },
+  );
+}
+
+passwordChangeLogout(context) {
+  return showDialog<void>(
+    context: context,
+    barrierDismissible: false,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: const Text('Success'),
+        content: SingleChildScrollView(
+          child: ListBody(
+            children: <Widget>[
+              Text('Password changed.'),
+              Text('Please Login again: '),
+            ],
+          ),
+        ),
+        actions: <Widget>[
+          TextButton(
+              child: const Text('Ok'),
+              onPressed: () {
+                gotoHome(context);
+              }),
+        ],
+      );
+    },
+  );
+}
+
+Future<http.Response> testRoute() {
+  return http.get(
+    Uri.parse(baseURL + 'test'),
+    headers: {
+      'Content-type': 'application/json',
+      'Accept': 'application/json',
     },
   );
 }
@@ -499,32 +537,59 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    _testconnection() async {
+      final res = await testRoute();
+      var resfinal = jsonDecode(res.body);
+      return resfinal;
+    }
+
     return Scaffold(
-      appBar: AppBar(
-        title: Row(children: <Widget>[
-          Text(libraryName),
-          Text("Home Page"),
-        ]),
-        leading: IconButton(
-            onPressed: () => gotoHome(context), icon: const Icon(Icons.home)),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            ElevatedButton(
-                onPressed: _gotoUserLogin, child: const Text('Login User')),
-            const SizedBox(height: 10),
-            ElevatedButton(
-                onPressed: _gotoOperatorLogin,
-                child: const Text('Login Operator')),
-            const SizedBox(height: 10),
-            ElevatedButton(
-                onPressed: _gotoAdminLogin, child: const Text('Login Admin')),
-          ],
+        appBar: AppBar(
+          title: Row(children: <Widget>[
+            Text(libraryName),
+            Text("Home Page"),
+          ]),
+          leading: IconButton(
+              onPressed: () => gotoHome(context), icon: const Icon(Icons.home)),
         ),
-      ),
-    );
+        body: FutureBuilder(
+          future: _testconnection(),
+          builder: (context, snapshot) {
+            if (snapshot.hasData) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    ElevatedButton(
+                        onPressed: _gotoUserLogin,
+                        child: const Text('Login User')),
+                    const SizedBox(height: 10),
+                    ElevatedButton(
+                        onPressed: _gotoOperatorLogin,
+                        child: const Text('Login Operator')),
+                    const SizedBox(height: 10),
+                    ElevatedButton(
+                        onPressed: _gotoAdminLogin,
+                        child: const Text('Login Admin')),
+                  ],
+                ),
+              );
+            } else if (snapshot.hasError) {
+              final error = snapshot.error;
+              return Center(child: Text(error.toString()));
+            } else {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    Text("Waiting for Connection"),
+                    const CircularProgressIndicator(),
+                  ],
+                ),
+              );
+            }
+          },
+        ));
   }
 }
 
@@ -805,7 +870,15 @@ class _UserBorrowedBooksState extends State<UserBorrowedBooks> {
               final error = snapshot.error;
               return Center(child: Text(error.toString()));
             } else {
-              return const CircularProgressIndicator();
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    Text("Waiting for Connection"),
+                    const CircularProgressIndicator(),
+                  ],
+                ),
+              );
             }
           },
         ));
@@ -1038,7 +1111,7 @@ class _UserSearchBookResultState extends State<UserSearchBookResult> {
         appBar: AppBar(
           title: Row(children: <Widget>[
             Text(libraryName),
-            Text("User Borrowed Books"),
+            Text("User Search Book"),
           ]),
           leading: IconButton(
               onPressed: () => gotoUserHome(context),
@@ -1069,7 +1142,15 @@ class _UserSearchBookResultState extends State<UserSearchBookResult> {
               final error = snapshot.error;
               return Center(child: Text(error.toString()));
             } else {
-              return const CircularProgressIndicator();
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    Text("Waiting for Connection"),
+                    const CircularProgressIndicator(),
+                  ],
+                ),
+              );
             }
           },
         ));
@@ -1140,7 +1221,8 @@ class _UserChangePasswordState extends State<UserChangePassword> {
     var res = await userChangePassword(memberPasswordController.text);
     Map<String, dynamic> resmap = jsonDecode(res.body);
     if (resmap['status'] == 'ok') {
-      messageDialog('Password Changed', context);
+      memberPassword = '';
+      passwordChangeLogout(context);
     } else {
       errorDialog(res.statusCode, resmap['status'], context);
     }
@@ -2068,11 +2150,11 @@ class OperatorReturnBook extends StatefulWidget {
 
 class _OperatorReturnBookState extends State<OperatorReturnBook> {
   TextEditingController borrowIDController = TextEditingController();
-  _addBorrow() async {
+  _addReturn() async {
     var res = await operatorReturnBook(borrowIDController.text);
     Map<String, dynamic> resmap = jsonDecode(res.body);
     if (resmap['status'] == 'ok') {
-      messageDialog('Book Returned', context);
+      messageDialog('Book Returned' + resmap['msg'], context);
     } else {
       errorDialog(res.statusCode, resmap['status'], context);
     }
@@ -2102,7 +2184,7 @@ class _OperatorReturnBookState extends State<OperatorReturnBook> {
                   hintText: 'Enter BorrowID'),
             ),
             const SizedBox(height: 10),
-            ElevatedButton(onPressed: _addBorrow, child: const Text('Return')),
+            ElevatedButton(onPressed: _addReturn, child: const Text('Return')),
           ],
         ),
       ),
@@ -2119,9 +2201,21 @@ class OperatorPrintCard extends StatefulWidget {
 class _OperatorPrintCardState extends State<OperatorPrintCard> {
   TextEditingController printCardController = TextEditingController();
 
-  //err has some errors
   _printCard() async {
-    await operatorPrintCard(printCardController.text);
+    var res = await operatorPrintCard(printCardController.text);
+    if (res.statusCode != 200) {
+      Map<String, dynamic> resmap = jsonDecode(res.body);
+      errorDialog(res.statusCode, resmap['status'], context);
+    } else {
+      messageDialog('Downloading...', context);
+      final rawData = res.bodyBytes;
+      final content = base64Encode(rawData);
+      final anchor = html.AnchorElement(
+          href:
+              "data:application/octet-stream;charset=utf-16le;base64,$content")
+        ..setAttribute("download", "card.pdf")
+        ..click();
+    }
   }
 
   @override
@@ -2435,7 +2529,15 @@ class _AdminBorrowedBooksState extends State<AdminBorrowedBooks> {
               final error = snapshot.error;
               return Center(child: Text(error.toString()));
             } else {
-              return const CircularProgressIndicator();
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    Text("Waiting for Connection"),
+                    const CircularProgressIndicator(),
+                  ],
+                ),
+              );
             }
           },
         ));
@@ -2585,9 +2687,21 @@ class AdminPrintCard extends StatefulWidget {
 class _AdminPrintCardState extends State<AdminPrintCard> {
   TextEditingController printCardController = TextEditingController();
 
-  //err has some errors
   _printCard() async {
-    await adminPrintCard(printCardController.text);
+    var res = await adminPrintCard(printCardController.text);
+    if (res.statusCode != 200) {
+      Map<String, dynamic> resmap = jsonDecode(res.body);
+      errorDialog(res.statusCode, resmap['status'], context);
+    } else {
+      messageDialog('Downloading...', context);
+      final rawData = res.bodyBytes;
+      final content = base64Encode(rawData);
+      final anchor = html.AnchorElement(
+          href:
+              "data:application/octet-stream;charset=utf-16le;base64,$content")
+        ..setAttribute("download", "card.pdf")
+        ..click();
+    }
   }
 
   @override
