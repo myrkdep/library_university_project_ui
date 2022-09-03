@@ -1514,6 +1514,13 @@ class OperatorAddBook extends StatefulWidget {
 
 class _OperatorAddBookState extends State<OperatorAddBook> {
   TextEditingController isbnController = TextEditingController();
+
+  _checkISBN(String isbn) async {
+    final res = await viewBook(savedISBN);
+    var resfinal = jsonDecode(res.body);
+    return resfinal;
+  }
+
   void _saveISBN() {
     savedISBN = isbnController.text;
     setState(() {});
@@ -1555,66 +1562,126 @@ class _OperatorAddBookState extends State<OperatorAddBook> {
     );
   }
 
-  void _viewBook() async {
-    var res = await viewBook(savedISBN);
-    Map<String, dynamic> resmap = jsonDecode(res.body);
-    if (res.statusCode == 200 && resmap['status'] == 'not available') {
-      messageDialog('Book not available', context);
-    } else if (res.statusCode == 200 && resmap['status'] == 'available') {
-      messageDialog(resmap['book'], context);
-    } else {
-      errorDialog(res.statusCode, resmap['status'], context);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Row(children: <Widget>[
-          Text(libraryName),
-          Text("Operator Add Book Home"),
-        ]),
-        leading: IconButton(
-            onPressed: () => gotoOperatorHome(context),
-            icon: const Icon(Icons.home)),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Text((savedISBN == '') ? '' : 'saved isbn: ' + savedISBN),
-            const SizedBox(height: 10),
-            TextField(
-              controller: isbnController,
-              decoration: InputDecoration(
-                  border: const OutlineInputBorder(),
-                  labelText: (savedISBN == '') ? 'ISBN:' : 'ISBN Saved',
-                  hintText: 'Enter ISBN'),
-            ),
-            const SizedBox(height: 10),
-            ElevatedButton(
-                onPressed: _saveISBN, child: const Text('Save ISBN')),
-            const SizedBox(height: 10),
-            ElevatedButton(
-                onPressed: _viewBook, child: const Text('View Book')),
-            const SizedBox(height: 30),
-            ElevatedButton(
-                onPressed: _gotoAddBook, child: const Text('Add Book')),
-            const SizedBox(height: 10),
-            ElevatedButton(
-                onPressed: _gotoAddAuthor, child: const Text('Add Author')),
-            const SizedBox(height: 10),
-            ElevatedButton(
-                onPressed: _gotoAddTranslator,
-                child: const Text('Add Translator')),
-            const SizedBox(height: 10),
-            ElevatedButton(
-                onPressed: _gotoAddCategory, child: const Text('Add Category')),
-          ],
+        appBar: AppBar(
+          title: Row(children: <Widget>[
+            Text(libraryName),
+            Text("Operator Add Book Home"),
+          ]),
+          leading: IconButton(
+              onPressed: () => gotoOperatorHome(context),
+              icon: const Icon(Icons.home)),
         ),
-      ),
-    );
+        body: FutureBuilder(
+          future: _checkISBN(savedISBN),
+          builder: (context, snapshot) {
+            if (snapshot.hasData &&
+                snapshot.connectionState == ConnectionState.done) {
+              var data = (snapshot.data as Map<String, dynamic>);
+              if (data['status'] == 'not available') {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      Text((savedISBN == '') ? '' : 'saved isbn: ' + savedISBN),
+                      const SizedBox(height: 20),
+                      TextField(
+                        controller: isbnController,
+                        decoration: InputDecoration(
+                            border: const OutlineInputBorder(),
+                            labelText:
+                                (savedISBN == '') ? 'ISBN:' : 'ISBN Saved',
+                            hintText: 'Enter ISBN'),
+                      ),
+                      const SizedBox(height: 10),
+                      ElevatedButton(
+                          onPressed: _saveISBN, child: const Text('Save ISBN')),
+                      const SizedBox(height: 30),
+                      ElevatedButton(
+                          onPressed: _gotoAddBook,
+                          child: const Text('Add Book')),
+                    ],
+                  ),
+                );
+              } else if (data['status'] == 'available') {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      Text(data['book']),
+                      const SizedBox(height: 20),
+                      TextField(
+                        controller: isbnController,
+                        decoration: InputDecoration(
+                            border: const OutlineInputBorder(),
+                            labelText:
+                                (savedISBN == '') ? 'ISBN:' : 'ISBN Saved',
+                            hintText: 'Enter ISBN'),
+                      ),
+                      const SizedBox(height: 10),
+                      ElevatedButton(
+                          onPressed: _saveISBN, child: const Text('Save ISBN')),
+                      const SizedBox(height: 30),
+                      ElevatedButton(
+                          onPressed: _gotoAddBook,
+                          child: const Text('Add Book')),
+                      const SizedBox(height: 10),
+                      ElevatedButton(
+                          onPressed: _gotoAddAuthor,
+                          child: const Text('Add Author')),
+                      const SizedBox(height: 10),
+                      ElevatedButton(
+                          onPressed: _gotoAddTranslator,
+                          child: const Text('Add Translator')),
+                      const SizedBox(height: 10),
+                      ElevatedButton(
+                          onPressed: _gotoAddCategory,
+                          child: const Text('Add Category')),
+                    ],
+                  ),
+                );
+              } else {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      Text((savedISBN == '') ? '' : 'saved isbn: ' + savedISBN),
+                      const SizedBox(height: 10),
+                      Text(data['status']),
+                      const SizedBox(height: 20),
+                      TextField(
+                        controller: isbnController,
+                        decoration: InputDecoration(
+                            border: const OutlineInputBorder(),
+                            labelText:
+                                (savedISBN == '') ? 'ISBN:' : 'ISBN Saved',
+                            hintText: 'Enter ISBN'),
+                      ),
+                      const SizedBox(height: 10),
+                      ElevatedButton(
+                          onPressed: _saveISBN, child: const Text('Save ISBN')),
+                    ],
+                  ),
+                );
+              }
+            } else if (snapshot.hasError) {
+              final error = snapshot.error;
+              return Center(child: Text(error.toString()));
+            } else {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    Text("Waiting for Connection"),
+                    const CircularProgressIndicator(),
+                  ],
+                ),
+              );
+            }
+          },
+        ));
   }
 }
 
