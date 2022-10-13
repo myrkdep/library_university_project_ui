@@ -7,7 +7,7 @@ import 'package:horizontal_data_table/horizontal_data_table.dart';
 
 // config
 const String libraryName = 'IAU Shiraz Library--->';
-const String baseURL = 'https://api-iauproject.fandogh.cloud/api/';
+const String baseURL = 'http://localhost:5000/api/';
 
 String memberId = '';
 String memberPassword = '';
@@ -907,7 +907,7 @@ class _UserSearchBookState extends State<UserSearchBook> {
       nameController.text,
       publishYearController.text,
       editionController.text,
-      publishYearController.text,
+      publisherController.text,
       authorController.text,
       translatorController.text,
       categoryController.text
