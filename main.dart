@@ -1217,6 +1217,9 @@ class UserChangePassword extends StatefulWidget {
 
 class _UserChangePasswordState extends State<UserChangePassword> {
   TextEditingController memberPasswordController = TextEditingController();
+  TextEditingController memberPasswordRepeatController =
+      TextEditingController();
+  TextEditingController memberPasswordOldController = TextEditingController();
   _changePassword() async {
     var res = await userChangePassword(memberPasswordController.text);
     Map<String, dynamic> resmap = jsonDecode(res.body);
@@ -1225,6 +1228,23 @@ class _UserChangePasswordState extends State<UserChangePassword> {
       passwordChangeLogout(context);
     } else {
       errorDialog(res.statusCode, resmap['status'], context);
+    }
+  }
+
+  _checkPassword() async {
+    //memberPasswordController.text
+    //sha256.convert(ascii.encode(passwordController.text)).toString();
+    if (memberPasswordController.text == memberPasswordRepeatController.text) {
+      if (sha256
+              .convert(ascii.encode(memberPasswordOldController.text))
+              .toString() ==
+          memberPassword) {
+        _changePassword();
+      } else {
+        messageDialog("Old password is not correct", context);
+      }
+    } else {
+      messageDialog("New passwords don't match", context);
     }
   }
 
@@ -1246,6 +1266,15 @@ class _UserChangePasswordState extends State<UserChangePassword> {
           children: <Widget>[
             TextField(
               obscureText: true,
+              controller: memberPasswordOldController,
+              decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
+                  labelText: 'Old Password:',
+                  hintText: 'Enter Old Password'),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              obscureText: true,
               controller: memberPasswordController,
               decoration: InputDecoration(
                   border: const OutlineInputBorder(),
@@ -1253,8 +1282,17 @@ class _UserChangePasswordState extends State<UserChangePassword> {
                   hintText: 'Enter New Password'),
             ),
             const SizedBox(height: 10),
+            TextField(
+              obscureText: true,
+              controller: memberPasswordRepeatController,
+              decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
+                  labelText: 'New Password Repeat:',
+                  hintText: 'Enter New Password Again'),
+            ),
+            const SizedBox(height: 10),
             ElevatedButton(
-                onPressed: _changePassword,
+                onPressed: _checkPassword,
                 child: const Text('Change Password')),
           ],
         ),
